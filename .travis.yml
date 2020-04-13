@@ -2,28 +2,89 @@ os: linux
 dist: xenial
 language: python
 
+_aliases:
+  - &docs
+    python: 3.6
+    install:
+      - pip install sphinx
+      - pip install numpydoc
+    script: sphinx-build -W --keep-going doc _build/html
+
 jobs:
   include:
 
+    - stage: Tests
+
     # Test Code
-    - python: 2.6
-      dist: trusty
-    - python: 2.7
-    - python: 3.3
-      dist: trusty
-    - python: 3.4
-    - python: 3.5
-    - python: 3.6
-    - python: 3.7
-    - python: 3.8
+#      python: 2.6
+#      dist: trusty
+#    - python: 2.7
+#    - python: 3.3
+#      dist: trusty
+#    - python: 3.4
+#    - python: 3.5
+#    - python: 3.6
+#    - python: 3.7
+#    - python: 3.8
 
     # Test Docs
-    - name: docs
+      name: docs
+      <<: *docs
+
+    # Upload Docs to GitHub Pages
+    - stage: Upload docs to GitHub Pages
+      <<: *docs
+      before_deploy:
+        - VERSION=$(python setup.py --version)
+        - tar -C _build/html -zcf _build/docs_${VERSION}.tar.gz .
+        - rm -rf _build/html
+      deploy:
+        provider: pages
+        edge: true
+        local_dir: _build/
+        commit_message: Deploy %{project_name}
+        keep_history: false
+        on:
+          all_branches: true
+      if: (type = push) AND ((tag IS present) OR (branch = add_about))  # change to master!!!
+
+    # Deploy to GitHub Releases and PyPi
+    - stage: Deploy
+
+      name: GitHub Releases
+      python: 3.6
+      install: skip
+      script: skip
+      before_deploy:
+        - export VERSION=$(python setup.py --version)
+        - mkdir empty_dir
+      deploy:
+        provider: releases
+        edge: true
+        name: "v${VERSION}"
+        body: "Version ${VERSION} of PDS4 Python Tools and PDS4 Viewer."
+        file: empty_dir/*
+        on:
+          all_branches: true
+      if: (type = push) AND (tag IS present)
+
+    - name: PyPi
       python: 3.6
       install:
-        - pip install sphinx
-        - pip install numpydoc
-      script: sphinx-build -W --keep-going doc _build/html
+        - pip install wheel
+        - pip install twine
+      script:   ## use production PyPi!!!!!
+        - python setup.py sdist --formats=zip
+        - python setup.py bdist_wheel
+        - |
+          echo -e "
+            [testpypi]
+            repository: https://test.pypi.org/legacy/
+            username: __token__
+            password: ${PYPI_TOKEN}
+          " | sed -e 's/^ *//g' -e '/^$/d' > ~/.pypirc
+        - twine upload dist/* -r testpypi
+      if: (type = push) AND (tag IS present)
 
 install:
   - if [[ $TRAVIS_PYTHON_VERSION == 3.3 ]]; then
@@ -38,3 +99,6 @@ install:
 
 script:
   - tox
+
+notifications:
+  if: branch = master
