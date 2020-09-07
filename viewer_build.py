@@ -12,6 +12,7 @@ import glob
 import errno
 import shutil
 import zipfile
+import plistlib
 import argparse
 import textwrap
 import platform
@@ -61,8 +62,8 @@ def build_windows():
                      pathex=[code_dir],
                      binaries=None,
                      datas=[ (window_icon, '.'), (taskbar_icon, '.') ],
-                     hiddenimports=['pds4_tools', 'Tkinter', 'numpy', 'matplotlib', 'FileDialog',
-                                    'tkColorChooser', 'tkFileDialog'],
+                     hiddenimports=['pds4_tools', 'numpy', 'matplotlib', 'FileDialog',
+                                    'tkinter', 'tkinter.colorchooser', 'tkinter.filedialog'],
                      hookspath=None,
                      runtime_hooks=None,
                      excludes=None,
@@ -136,8 +137,8 @@ def build_linux():
                      pathex=[code_dir],
                      binaries=None,
                      datas=[ (window_icon, '.'), (taskbar_icon, '.') ],
-                     hiddenimports=['pds4_tools', 'Tkinter', 'numpy', 'matplotlib', 'FileDialog',
-                                    'tkColorChooser', 'tkFileDialog'],
+                     hiddenimports=['pds4_tools', 'numpy', 'matplotlib', 'FileDialog',
+                                    'tkinter', 'tkinter.colorchooser', 'tkinter.filedialog'],
                      hookspath=None,
                      runtime_hooks=None,
                      excludes=None,
@@ -230,8 +231,7 @@ def build_mac_10_11():
                 iconfile='pds4_tools/viewer/logo/logo.icns',
                 packages=['certifi'],
                 
-                plist=dict(NSHighResolutionCapable="True",
-                           CFBundleIdentifier="{exe_name}"),
+                plist=dict(NSHighResolutionCapable="True"),
 
             )),
         )
@@ -286,6 +286,26 @@ def build_mac_10_11():
         file_handler.seek(0)
         file_handler.writelines(content)
 
+    # Remove unnecessary keys from Info.plist
+    plist_file = os.path.join(output_file, 'Contents', 'Info.plist')
+    remove_keys = ['PythonInfoDict', 'CFBundleIdentifier', 'CFBundleVersion', 'NSHumanReadableCopyright']
+
+    with open(plist_file, 'rb+') as file_handler:
+
+        # API change in plistlib between Python2.7 and Python3.4+
+        plist_load = plistlib.load if hasattr(plistlib, 'load') else plistlib.readPlist
+        plist_dump = plistlib.dump if hasattr(plistlib, 'load') else plistlib.writePlist
+
+        plist = plist_load(file_handler)
+
+        for key in remove_keys:
+            del plist[key]
+
+        file_handler.seek(0)
+        file_handler.truncate()
+
+        plist_dump(plist, file_handler)
+
     # Remove excluded data
     # (Py2app does not provide a method to exclude data files with-in config)
     for exclude_path in EXCLUDE_DATA_PY2APP:
@@ -324,8 +344,8 @@ def build_mac_10_6():
                      pathex=[code_dir],
                      binaries=None,
                      datas=[ (window_icon, '.'), (taskbar_icon, '.') ],
-                     hiddenimports=['pds4_tools', 'Tkinter', 'numpy', 'matplotlib', 'FileDialog',
-                                    'tkColorChooser', 'tkFileDialog'],
+                     hiddenimports=['pds4_tools', 'numpy', 'matplotlib', 'FileDialog',
+                                    'Tkinter', 'tkColorChooser', 'tkFileDialog'],
                      hookspath=None,
                      runtime_hooks=None,
                      excludes=None,
