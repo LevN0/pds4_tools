@@ -122,7 +122,8 @@ def build_linux():
     DEPS = (
         'pyinstaller==3.5',
         'numpy==1.16.6 --no-binary :all:',
-        'matplotlib==3.1.3'
+        'matplotlib==3.1.3',
+        'certifi'
     )
 
     SPEC_FILE = """
@@ -231,7 +232,10 @@ def build_mac_10_11():
                 iconfile='pds4_tools/viewer/logo/logo.icns',
                 packages=['certifi'],
                 
-                plist=dict(NSHighResolutionCapable="True"),
+                plist=dict(NSPrincipalClass='NSApplication',
+                           NSHighResolutionCapable=True,
+                           LSBackgroundOnly=False,
+                           CFBundleDevelopmentRegion='en'),
 
             )),
         )
@@ -243,16 +247,24 @@ def build_mac_10_11():
             import os
             import sys
             import platform
+            import subprocess
          
             if sys.platform != 'darwin':
                 return
          
             version, _, _ = platform.mac_ver()
             if (version == '10.14.6') and ('--bypass-broken' not in sys.argv):
-                msg = ['PDS4 Viewer: OS-X 10.14.6 is not supported due to serious OS bug.',
+
+                msg = ['PDS4 Viewer: OS-X 10.14.6 is not supported due to a serious OS bug.',
                        'Use --bypass-broken to continue at your own risk. Save all work first!',
                        'Exiting...', '']
+
                 sys.stderr.write(os.linesep.join(msg))
+                subprocess.call("osascript -e '"
+                                'tell app (path to frontmost application as text) to display dialog "{0}"'
+                                'with title "PDS4 Viewer" with icon stop buttons {{"Quit"}}'
+                                "'".format(' '.join(msg)), shell=True)
+                
                 sys.exit(1)
      
         _prevent_broken_osx()
@@ -288,7 +300,8 @@ def build_mac_10_11():
 
     # Remove unnecessary keys from Info.plist
     plist_file = os.path.join(output_file, 'Contents', 'Info.plist')
-    remove_keys = ['PythonInfoDict', 'CFBundleIdentifier', 'CFBundleVersion', 'NSHumanReadableCopyright']
+    remove_keys = ['PythonInfoDict', 'CFBundleIdentifier', 'CFBundleVersion', 'CFBundleSignature',
+                   'NSHumanReadableCopyright', 'NSMainNibFile=']
 
     with open(plist_file, 'rb+') as file_handler:
 
@@ -375,11 +388,12 @@ def build_mac_10_6():
         app = BUNDLE(exe,
                      name='{app_name}',
                      icon=taskbar_icon,
-                     info_plist={{
-                        'NSHighResolutionCapable': 'True'
-                        }},
+                     info_plist=dict(
+                           NSPrincipalClass='NSApplication',
+                           NSHighResolutionCapable=True,
+                           LSBackgroundOnly=False,
+                           CFBundleDevelopmentRegion='en'),
                      bundle_identifier=None)
-
     """
 
     output_dir = os.path.join(BUILD_DIR, 'dist')
