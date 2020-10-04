@@ -45,7 +45,7 @@ def build():
 def build_windows():
 
     DEPS = (
-        'pyinstaller==3.5',
+        'pyinstaller==3.6',
         'numpy==1.16.6',
         'matplotlib==3.1.3'
     )
