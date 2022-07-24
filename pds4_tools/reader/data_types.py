@@ -370,7 +370,7 @@ def pds_to_numpy_name(name):
     # the colon by an underscore because under Python 3 this seems to cause an error when using
     # ``recarray.__new__`` with the ``buf`` keyword.
 
-    name = name.replace(':', '_')
+    # name = name.replace(':', '_')
     if six.PY2:
         name = name.encode('utf-8')
 

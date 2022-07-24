@@ -1432,7 +1432,7 @@
           </Field_Binary>
         </Group_Field_Binary>
         <Field_Binary>
-          <name>INST_SUN_ANGLE</name>
+          <name>INST_SUN:ANGLE</name>
           <field_location unit="byte">731</field_location>
           <data_type>IEEE754MSBDouble</data_type>
           <field_length unit="byte">8</field_length>
